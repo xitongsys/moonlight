@@ -1,7 +1,7 @@
 class EC:
     NONE = 0
-    ERROR = 1
-    NEED_MORE = 2
+    NEED_MORE = 1
+    ERROR = -1
 
 class Coding:
     def encode_int(v, size):
