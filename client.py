@@ -117,6 +117,6 @@ class Client:
 
 
 if __name__ == '__main__':
-    #client = Client("139.224.117.52", 9001)
-    client = Client("127.0.0.1", 9001)
+    client = Client("139.224.117.52", 9001)
+    #client = Client("127.0.0.1", 9001)
     client.start()

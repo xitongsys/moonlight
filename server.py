@@ -93,12 +93,16 @@ class Server:
             connection = self.conns[id]
             if len(connection.output_buf) == 0:
                 continue
-            size = wsocket.send(connection.output_buf)
 
-            logger.debug("[SERVER] send size {}".format(size))
+            try:
+                size = wsocket.send(connection.output_buf)
 
-            if size > 0:
-                util.pop(connection.output_buf, size)
+                logger.debug("[SERVER] send size {}".format(size))
+
+                if size > 0:
+                    util.pop(connection.output_buf, size)
+            except:
+                self.close_conn(wsocket)
 
         for xsocket in xsockets:
             self.close_conn(xsocket)
