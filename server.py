@@ -17,8 +17,7 @@ class Server:
         self.socket.setblocking(False)
         self.socket.listen(self.max_num)
 
-        logger.info("server start listen {}:{} by max_num = ".format(
-            self.addr, self.port, self.max_num))
+        logger.info("server start listen {}:{} by max_num = {}".format(self.addr, self.port, self.max_num))
 
         self.rsockets, self.wsockets, self.xsockets = [self.socket], [], []
 

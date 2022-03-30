@@ -9,9 +9,6 @@ from msg import *
 import random
 
 
-
-
-
 class Config:
     def __init__(self, config_file: str = None):
         self.addr = "0.0.0.0"
@@ -62,6 +59,7 @@ class MainServer:
     def create_client(self, id: str, conn: socket):
         if id not in self.clients:
             self.clients[id] = Connection(id, conn)
+            self.client_ids[conn] = id
             self.rsockets.append(conn)
             self.wsockets.append(conn)
 
@@ -82,45 +80,48 @@ class MainServer:
                     self.create_server(rule)
 
     def start(self):
-        rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 0)
-        for rsocket in rsockets:
-            if rsocket is self.socket:
-                conn, addr = rsocket.accept()
-                self.create_client(addr, conn)
+        while True:
+            rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 0)
+            for rsocket in rsockets:
+                if rsocket is self.socket:
+                    conn, addr = rsocket.accept()
+                    self.create_client(addr, conn)
 
-            else:
-                data = rsocket.recv(1024 * 10)
-                client_id = self.client_ids[rsocket]
-                client = self.clients[client_id]
-                if len(data) > 0:
-                    util.push(client.output_buf, data)
-                    msg, ec = util.pop_msg(client.output_buf)
-                    if ec == 0 and msg.id in self.id2server:
-                        if self.id2server[msg.id].push_msg(msg) != 0:
-                            del self.id2server[msg.id]
                 else:
-                    self.destroy_client(client_id)
+                    data = rsocket.recv(1024 * 10)
+                    client_id = self.client_ids[rsocket]
+                    client = self.clients[client_id]
+                    if len(data) > 0:
+                        util.push(client.output_buf, data)
+                        msg, ec = util.pop_msg(client.output_buf)
+                        if ec == 0 and msg.id in self.id2server:
+                            if self.id2server[msg.id].push_msg(msg) != 0:
+                                del self.id2server[msg.id]
+                    else:
+                        self.destroy_client(client_id)
 
-        for wsocket in self.wsockets:
-            client_id = self.client_ids[wsocket]
-            client = self.clients[client_id]
-            if len(client.input_buf) == 0:
-                continue
-            size = client.conn.send(client.input_buf)
-            if size > 0:
-                util.pop(client.input_buf, size)
+            for wsocket in self.wsockets:
+                client_id = self.client_ids[wsocket]
+                client = self.clients[client_id]
+                if len(client.input_buf) == 0:
+                    continue
+                size = client.conn.send(client.input_buf)
+                if size > 0:
+                    util.pop(client.input_buf, size)
 
-        for rule, server in self.rules:
-            msg, ec = server.pop_msg()
-            if msg.type == MsgType.OPEN_CONN:
-                msg.data = bytes(rule.__str__())
-                self.id2server[msg.id] = server
-                self.id2client[msg.id] = self.choose_client()
+            for rule, server in self.rules.items():
+                msg, ec = server.pop_msg()
+                if msg.type == MsgType.OPEN_CONN:
+                    msg.data = bytes(rule.__str__())
+                    self.id2server[msg.id] = server
+                    self.id2client[msg.id] = self.choose_client()
 
-            if ec == 0 and msg.id in self.id2clients:
-                client = self.id2clients[msg.id]
-                util.push_msg(client.input_buf, msg.type, msg.id, msg.data)
+                if ec == 0 and msg.id in self.id2clients:
+                    client = self.id2clients[msg.id]
+                    util.push_msg(client.input_buf, msg.type, msg.id, msg.data)
 
 
 if __name__ == '__main__':
-    ms = MainServer()
+    ms = MainServer('cfg.json')
+    ms.load_rules(ms.config.rule_file)
+    ms.start()

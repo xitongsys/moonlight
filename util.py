@@ -1,5 +1,10 @@
 from typing import Tuple
 from msg import *
+from socket import socket
+
+
+def socket2key(s: socket) -> str:
+    return str(s)
 
 
 def push(buf: bytearray, data: bytes) -> int:
@@ -21,8 +26,8 @@ def push_msg(buf: bytearray, type: int, id: str, data: bytes = b'') -> int:
 
 
 def pop_msg(buf: bytearray) -> Tuple[Msg, int]:
-        msg = Msg()
-        size, ec = msg.decode(buf)
-        if ec == 0 and size > 0:
-            del buf[:size]
-        return msg, ec
+    msg = Msg()
+    size, ec = msg.decode(buf)
+    if ec == 0 and size > 0:
+        del buf[:size]
+    return msg, ec

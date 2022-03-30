@@ -85,3 +85,7 @@ class Client:
                     size = wsocket.send(connection.input_buf)
                     if size > 0:
                         util.pop(connection.input_buf, size)
+
+if __name__ == '__main__':
+    client = Client("127.0.0.1", 9001)
+    client.start()

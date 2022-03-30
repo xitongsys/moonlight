@@ -1,0 +1,6 @@
+{
+"addr":"0.0.0.0",
+"port":9001,
+"max_num":1024,
+"rule_file":"rules.csv"
+}

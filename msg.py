@@ -21,7 +21,7 @@ class Msg:
 
     def decode(self, buf: bytearray):
         pos = 0
-        self.type, size, ec = Coding.decode_int(buf[pos:])
+        self.type, size, ec = Coding.decode_int(buf[pos:], 1)
         if ec != EC.NONE:
             return 0, ec
         pos += size

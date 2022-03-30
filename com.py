@@ -27,6 +27,7 @@ class Rule:
         self.from_port = int(its[1])
         self.to_addr = its[2]
         self.to_port = int(its[3])
+        return 0
 
     def __hash__(self):
         key = "{},{},{},{}".format(self.from_addr, self.from_port, self.to_addr, self.to_port)
