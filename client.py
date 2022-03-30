@@ -22,7 +22,7 @@ class Client:
         self.ids = {}
 
     def open_conn(self, id: str, addr: str, port: int):
-        logger.info("[CLIENT] open conn {} {}:{}".format(id, addr, port))
+        logger.info("[CLIENT] open conn id={}, {}:{}".format(id, addr, port))
 
         conn = socket(AF_INET, SOCK_STREAM)
         conn.connect((addr, port))
@@ -46,7 +46,7 @@ class Client:
 
     def start(self):
         while True:
-            rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 10)
+            rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 1000)
 
             # read
             for rsocket in rsockets:
@@ -54,7 +54,7 @@ class Client:
                     data = self.socket.recv(1024 * 10)
                     if len(data) == 0:
                         self.stop()
-                        continue
+                        return
 
                     util.push(self.input_buf, data)
                     msg, ec = util.pop_msg(self.input_buf)
@@ -74,14 +74,17 @@ class Client:
                 elif rsocket in self.ids:
                     id = self.ids[rsocket]
                     connection = self.conns[id]
-                    data = rsocket.recv(1024 * 10)
 
-                    logger.debug("[CLIENT] recv {}".format(len(data)))
+                    try:
+                        data = rsocket.recv(1024 * 10)
+                        logger.debug("[CLIENT] recv {}".format(len(data)))
+                        if len(data) == 0:
+                            raise ValueError("close conn")
 
-                    if len(data) == 0:
+                        util.push_msg(self.output_buf, MsgType.DATA, id, data)
+                    except:
                         self.close_conn(id)
-                        continue
-                    util.push_msg(self.output_buf, MsgType.DATA, id, data)
+
 
             # write
             for wsocket in wsockets:
@@ -114,5 +117,6 @@ class Client:
 
 
 if __name__ == '__main__':
+    #client = Client("139.224.117.52", 9001)
     client = Client("127.0.0.1", 9001)
     client.start()

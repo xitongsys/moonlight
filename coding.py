@@ -31,7 +31,8 @@ class Coding:
     def decode_string(buf):
         val, _, ec = Coding.decode_int(buf, 4)
         if ec != EC.NONE:
-            return ec
+            return "", 0, ec
+
         if len(buf) < val + 4:
             return "", 0, EC.NEED_MORE
 
@@ -47,7 +48,8 @@ class Coding:
     def decode_bytes(buf):
         val, _, ec = Coding.decode_int(buf, 4)
         if ec != EC.NONE:
-            return ec
+            return "", 0, ec
+
         if len(buf) < val + 4:
             return "", 0, EC.NEED_MORE
 

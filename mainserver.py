@@ -103,12 +103,16 @@ class MainServer:
                         data = rsocket.recv(1024 * 10)
                         if len(data) > 0:
                             util.push(client.output_buf, data)
-                            msg, ec = util.pop_msg(client.output_buf)
-                            if ec == 0 and msg.id in self.id2server:
-                                logger.debug("[MAINSERVER] recv msg client {}".format(msg.__dict__))
+                            while True:
+                                msg, ec = util.pop_msg(client.output_buf)
+                                if ec != 0:
+                                    break
 
-                                if self.id2server[msg.id].push_msg(msg) != 0:
-                                    del self.id2server[msg.id]
+                                if ec == 0 and msg.id in self.id2server:
+                                    logger.debug("[MAINSERVER] recv msg from client len={}, {}".format(len(msg.data), msg.__dict__))
+
+                                    if self.id2server[msg.id].push_msg(msg) != 0:
+                                        del self.id2server[msg.id]
                         else:
                             raise ValueError("destroy client")
 
