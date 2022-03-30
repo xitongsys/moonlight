@@ -27,9 +27,9 @@ class Server:
         self.conns = {}
 
     def open_conn(self, conn: socket, addr: str):
-        id = "{}:{}-{}:{}".format(self.addr,self.port, addr[0], addr[1])
+        id = "{}:{},{}:{}".format(self.addr,self.port, addr[0], addr[1])
 
-        logger.info("new connection: {}".format(id))
+        logger.info("[SERVER] open conn {}".format(id))
 
         connection = Connection(id, conn)
         conn.setblocking(False)
@@ -41,6 +41,8 @@ class Server:
 
     def close_conn(self, conn):
         if conn in self.ids:
+            logger.info("[SERVER] close conn {}".format(conn))
+
             id = self.conns[conn]
             del self.conns[id]
             del self.ids[conn]
@@ -55,6 +57,7 @@ class Server:
         if msg.id not in self.conns:
             return -1
         util.push(self.conns[msg.id].output_buf, msg.data)
+        return 0
 
     def pop_msg(self) -> Tuple[Msg, int]:
         return util.pop_msg(self.input_buf)

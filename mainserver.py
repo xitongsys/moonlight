@@ -102,6 +102,8 @@ class MainServer:
                         util.push(client.output_buf, data)
                         msg, ec = util.pop_msg(client.output_buf)
                         if ec == 0 and msg.id in self.id2server:
+                            logger.debug("[MAINSERVER] recv msg client {}".format(msg.__dict__))
+
                             if self.id2server[msg.id].push_msg(msg) != 0:
                                 del self.id2server[msg.id]
                     else:
@@ -122,7 +124,7 @@ class MainServer:
                 if ec != 0:
                     continue
 
-                logger.debug("[MAINSERVER] pop msg {} {}".format(rule, msg.__dict__))
+                logger.debug("[MAINSERVER] pop msg from server {} {}".format(rule, msg.__dict__))
 
                 if msg.type == MsgType.OPEN_CONN:
                     msg.data = str.encode(rule.__str__(), encoding='utf-8')
