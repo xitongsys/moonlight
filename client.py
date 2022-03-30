@@ -37,8 +37,8 @@ class Client:
 
         if id in self.conns:
             conn = self.conns[id].conn
+            del self.ids[conn]
             del self.conns[id]
-            del self.ids[id]
 
     def stop(self):
         self.socket.close()
@@ -71,7 +71,7 @@ class Client:
                             connection = self.conns[msg.id]
                             util.push(connection.input_buf, msg.data)
 
-                else:
+                elif rsocket in self.ids:
                     id = self.ids[rsocket]
                     connection = self.conns[id]
                     data = rsocket.recv(1024 * 10)
@@ -92,7 +92,7 @@ class Client:
 
                         util.pop(self.output_buf, size)
 
-                elif wsocket is not self.socket:
+                elif wsocket is not self.socket and wsocket in self.ids:
                     id = self.ids[wsocket]
                     connection = self.conns[id]
                     if len(connection.input_buf) > 0:
@@ -102,6 +102,15 @@ class Client:
 
                         if size > 0:
                             util.pop(connection.input_buf, size)
+
+            for xsocket in xsockets:
+                if xsocket is self.socket:
+                    self.stop()
+                    return
+
+                if xsocket in self.ids:
+                    id = self.ids[xsocket]
+                    self.close_conn(id)
 
 
 if __name__ == '__main__':

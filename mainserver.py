@@ -75,7 +75,9 @@ class MainServer:
                     remove_ids.append(id)
             for id in remove_ids:
                 del self.id2client[id]
+
             del self.clients[client_id]
+            del self.client_ids[c.conn]
 
     def load_rules(self, file: str):
         with open(file, 'r') as fp:
@@ -94,22 +96,29 @@ class MainServer:
                     client_id = "{}:{}".format(addr[0], addr[1])
                     self.create_client(client_id, conn)
 
-                else:
+                elif rsocket in self.client_ids:
                     client_id = self.client_ids[rsocket]
                     client = self.clients[client_id]
-                    data = rsocket.recv(1024 * 10)
-                    if len(data) > 0:
-                        util.push(client.output_buf, data)
-                        msg, ec = util.pop_msg(client.output_buf)
-                        if ec == 0 and msg.id in self.id2server:
-                            logger.debug("[MAINSERVER] recv msg client {}".format(msg.__dict__))
+                    try:
+                        data = rsocket.recv(1024 * 10)
+                        if len(data) > 0:
+                            util.push(client.output_buf, data)
+                            msg, ec = util.pop_msg(client.output_buf)
+                            if ec == 0 and msg.id in self.id2server:
+                                logger.debug("[MAINSERVER] recv msg client {}".format(msg.__dict__))
 
-                            if self.id2server[msg.id].push_msg(msg) != 0:
-                                del self.id2server[msg.id]
-                    else:
+                                if self.id2server[msg.id].push_msg(msg) != 0:
+                                    del self.id2server[msg.id]
+                        else:
+                            raise ValueError("destroy client")
+
+                    except:
                         self.destroy_client(client_id)
 
             for wsocket in self.wsockets:
+                if wsocket not in self.client_ids:
+                    continue
+
                 client_id = self.client_ids[wsocket]
                 client = self.clients[client_id]
                 if len(client.input_buf) == 0:

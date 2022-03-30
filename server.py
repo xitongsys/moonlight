@@ -43,7 +43,7 @@ class Server:
         if conn in self.ids:
             logger.info("[SERVER] close conn {}".format(conn))
 
-            id = self.conns[conn]
+            id = self.ids[conn]
             del self.conns[id]
             del self.ids[conn]
 
@@ -70,17 +70,25 @@ class Server:
                 self.open_conn(conn, addr)
 
             else:
-                data = rsocket.recv(1024 * 10)
-                id = self.ids[rsocket]
+                try:
+                    data = rsocket.recv(1024 * 10)
+                    id = self.ids[rsocket]
 
-                logger.debug("[SERVER] recv {} {}".format(id, data))
+                    logger.debug("[SERVER] recv {} {}".format(id, data))
 
-                if len(data) > 0:
-                    util.push_msg(self.input_buf, MsgType.DATA, id, data)
-                else:
+                    if len(data) > 0:
+                        util.push_msg(self.input_buf, MsgType.DATA, id, data)
+                    else:
+                        raise ValueError("close connection")
+
+                except:
                     self.close_conn(rsocket)
 
+
         for wsocket in wsockets:
+            if wsocket not in self.ids:
+                continue
+
             id = self.ids[wsocket]
             connection = self.conns[id]
             if len(connection.output_buf) == 0:
