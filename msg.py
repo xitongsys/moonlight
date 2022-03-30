@@ -1,13 +1,14 @@
 from coding import Coding, EC
-
+from typing import Tuple
 
 class MsgType:
     OPEN_CONN = 1
     CLOSE_CONN = 2
     DATA = 3
 
+
 class Msg:
-    def __init__(self, type:int = MsgType.DATA, id: str = '', data: bytes = b''):
+    def __init__(self, type: int = MsgType.DATA, id: str = '', data: bytes = b''):
         self.type = type
         self.id = id
         self.data = data
@@ -19,7 +20,7 @@ class Msg:
         res += Coding.encode_bytes(self.data)
         return res
 
-    def decode(self, buf: bytearray):
+    def decode(self, buf: bytearray) -> Tuple[int, int]:
         pos = 0
         self.type, size, ec = Coding.decode_int(buf[pos:], 1)
         if ec != EC.NONE:

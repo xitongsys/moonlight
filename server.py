@@ -27,7 +27,10 @@ class Server:
         self.conns = {}
 
     def open_conn(self, conn: socket, addr: str):
-        id = "{}-{}".format(self.port, addr)
+        id = "{}:{}-{}:{}".format(self.addr,self.port, addr[0], addr[1])
+
+        logger.info("new connection: {}".format(id))
+
         connection = Connection(id, conn)
         conn.setblocking(False)
         self.conns[id] = connection
@@ -66,6 +69,9 @@ class Server:
             else:
                 data = rsocket.recv(1024 * 10)
                 id = self.ids[rsocket]
+
+                logger.debug("[SERVER] recv {} {}".format(id, data))
+
                 if len(data) > 0:
                     util.push_msg(self.input_buf, MsgType.DATA, id, data)
                 else:
@@ -77,6 +83,9 @@ class Server:
             if len(connection.output_buf) == 0:
                 continue
             size = wsocket.send(connection.output_buf)
+
+            logger.debug("[SERVER] send size {}".format(size))
+
             if size > 0:
                 util.pop(connection.output_buf, size)
 

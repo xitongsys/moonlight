@@ -56,19 +56,25 @@ class MainServer:
         if rule not in self.rules:
             self.rules[rule] = server.Server(rule.to_addr, rule.to_port, self.config.max_num)
 
-    def create_client(self, id: str, conn: socket):
-        if id not in self.clients:
-            self.clients[id] = Connection(id, conn)
-            self.client_ids[conn] = id
+    def create_client(self, client_id: str, conn: socket):
+        logger.info("[MAINSERVER] create client {}".format(client_id))
+        if client_id not in self.clients:
+            self.clients[client_id] = Connection(client_id, conn)
+            self.client_ids[conn] = client_id
             self.rsockets.append(conn)
             self.wsockets.append(conn)
 
     def destroy_client(self, client_id: str):
+        logger.info("[MAINSERVER] destroy client {}".format(client_id))
+
         if client_id in self.clients:
             c = self.clients[client_id]
+            remove_ids = []
             for id, client in self.id2client.items():
                 if c is client:
-                    del self.id2client[id]
+                    remove_ids.append(id)
+            for id in remove_ids:
+                del self.id2client[id]
             del self.clients[client_id]
 
     def load_rules(self, file: str):
@@ -85,12 +91,13 @@ class MainServer:
             for rsocket in rsockets:
                 if rsocket is self.socket:
                     conn, addr = rsocket.accept()
-                    self.create_client(addr, conn)
+                    client_id = "{}:{}".format(addr[0], addr[1])
+                    self.create_client(client_id, conn)
 
                 else:
-                    data = rsocket.recv(1024 * 10)
                     client_id = self.client_ids[rsocket]
                     client = self.clients[client_id]
+                    data = rsocket.recv(1024 * 10)
                     if len(data) > 0:
                         util.push(client.output_buf, data)
                         msg, ec = util.pop_msg(client.output_buf)
@@ -110,14 +117,20 @@ class MainServer:
                     util.pop(client.input_buf, size)
 
             for rule, server in self.rules.items():
+                server.poll()
                 msg, ec = server.pop_msg()
+                if ec != 0:
+                    continue
+
+                logger.debug("[MAINSERVER] pop msg {} {}".format(rule, msg.__dict__))
+
                 if msg.type == MsgType.OPEN_CONN:
-                    msg.data = bytes(rule.__str__())
+                    msg.data = str.encode(rule.__str__(), encoding='utf-8')
                     self.id2server[msg.id] = server
                     self.id2client[msg.id] = self.choose_client()
 
-                if ec == 0 and msg.id in self.id2clients:
-                    client = self.id2clients[msg.id]
+                if msg.id in self.id2client:
+                    client = self.id2client[msg.id]
                     util.push_msg(client.input_buf, msg.type, msg.id, msg.data)
 
 

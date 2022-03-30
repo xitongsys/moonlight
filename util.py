@@ -13,7 +13,7 @@ def push(buf: bytearray, data: bytes) -> int:
 
 
 def pop(buf: bytearray, size: int) -> bytearray:
-    size = min(len(bytearray), size)
+    size = min(len(buf), size)
     res = buf[:size]
     del buf[:size]
     return res
