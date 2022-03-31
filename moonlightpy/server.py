@@ -46,6 +46,8 @@ class Server:
 
         self.rsockets, self.wsockets, self.xsockets = [self.socket], [], []
 
+        self.load_rules(self.config.rule_file)
+
         logger.info("laurel start {}".format(json.dumps(self.config.__dict__)))
 
     def choose_inner_conn(self):
@@ -257,5 +259,4 @@ class Server:
 
 if __name__ == '__main__':
     ms = Server('cfg.json')
-    ms.load_rules(ms.config.rule_file)
     ms.start()
