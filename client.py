@@ -71,6 +71,9 @@ class Client:
                             connection = self.conns[msg.id]
                             util.push(connection.input_buf, msg.data)
 
+                            if connection.conn not in self.wsockets:
+                                self.wsockets.append(connection.conn)
+
                 elif rsocket in self.ids:
                     id = self.ids[rsocket]
                     connection = self.conns[id]
@@ -82,9 +85,11 @@ class Client:
                             raise ValueError("close conn")
 
                         util.push_msg(self.output_buf, MsgType.DATA, id, data)
+
+                        if self.socket not in self.wsockets:
+                            self.wsockets.append(self.socket)
                     except:
                         self.close_conn(id)
-
 
             # write
             for wsocket in wsockets:
@@ -92,8 +97,10 @@ class Client:
                     size = wsocket.send(self.output_buf)
                     if size > 0:
                         logger.debug("[CLIENT] send to mainserver {}".format(size))
-
                         util.pop(self.output_buf, size)
+
+                    if len(self.output_buf) == 0:
+                        self.wsockets.remove(self.socket)
 
                 elif wsocket is not self.socket and wsocket in self.ids:
                     id = self.ids[wsocket]
@@ -106,6 +113,9 @@ class Client:
                         if size > 0:
                             util.pop(connection.input_buf, size)
 
+                    if len(connection.input_buf) == 0:
+                        self.wsockets.remove(wsocket)
+
             for xsocket in xsockets:
                 if xsocket is self.socket:
                     self.stop()
@@ -117,6 +127,6 @@ class Client:
 
 
 if __name__ == '__main__':
-    client = Client("139.224.117.52", 9001)
-    #client = Client("127.0.0.1", 9001)
+    #client = Client("139.224.117.52", 9001)
+    client = Client("127.0.0.1", 9001)
     client.start()
