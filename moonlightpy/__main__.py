@@ -1,6 +1,6 @@
 import sys
-import moonlightpy.server as server
-import moonlightpy.client as client
+from . import server
+from . import client
 
 if __name__ == '__main__':
     role = sys.argv[1]

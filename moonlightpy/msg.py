@@ -1,4 +1,4 @@
-from coding import Coding, EC
+from .coding import Coding, EC
 from typing import Tuple
 
 class MsgType:

@@ -1,5 +1,5 @@
 from typing import Tuple
-from msg import *
+from .msg import *
 from socket import socket
 
 

@@ -1,10 +1,10 @@
 from socket import *
 from select import *
 
-import logger
-from msg import *
-from com import *
-import util
+from . import logger
+from .msg import *
+from .com import *
+import moonlightpy.util
 
 
 class Client:

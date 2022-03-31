@@ -1,9 +1,9 @@
 import json
 import socket, select
-import logger
-import util
-from com import Connection, Rule
-from msg import *
+from . import logger
+from . import util
+from .com import Connection, Rule
+from .msg import *
 import random
 
 
