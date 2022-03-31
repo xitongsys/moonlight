@@ -35,7 +35,7 @@ class Server:
         self.socket.setblocking(False)
         self.socket.listen(self.config.max_num)
 
-        self.outter_sockets = set()
+        self.outter_sockets = {}
 
         self.inner_conns = {}
         self.inner_ids = {}
@@ -61,7 +61,7 @@ class Server:
                 sk.setsockopt(SOL_SOCKET, SO_REUSEADDR, True)
                 sk.setblocking(False)
                 sk.listen(self.config.max_num)
-                self.outter_sockets.add(sk)
+                self.outter_sockets[sk] = rule
                 self.rsockets.append(sk)
                 logger.info("[SERVER] create rule {}".format(rule))
             except:
@@ -128,12 +128,25 @@ class Server:
                 outter_id = "{}:{}".format(addr[0], addr[1])
                 self.open_outter_conn(outter_id, conn)
 
+                rule = self.outter_sockets[rsocket]
+
+                inner_id = self.outter_id_to_inner_id[outter_id]
+                inner_conn = self.inner_conns[inner_id]
+                msg = Msg(MsgType.OPEN_CONN, outter_id, )
+                util.push_msg(inner_conn.input_buf, MsgType.OPEN_CONN, outter_id, bytes(rule.__str__(), "utf-8"))
+
+                if inner_conn.conn not in self.wsockets:
+                    self.wsockets.append(inner_conn.conn)
+
             elif rsocket in self.inner_ids:
                 inner_id = self.inner_ids[rsocket]
                 inner_conn = self.inner_conns[inner_id]
 
                 try:
                     data = rsocket.recv(1024 * 128)
+
+                    logger.debug("[SERVER] recv from inner {}".format(len(data)))
+
                     if len(data) > 0:
                         util.push(inner_conn.output_buf, data)
                         while True:
@@ -203,11 +216,26 @@ class Server:
                 except:
                     self.close_outter_conn(outter_id)
 
+    def exception_handler(self, xsockets:list):
+        for xsocket in xsockets:
+            if xsocket in self.outter_ids:
+                outter_id = self.outter_ids[xsocket]
+                self.close_outter_conn(outter_id)
+            elif xsocket in self.inner_ids:
+                inner_id = self.inner_ids[xsocket]
+                self.close_inner_conn(inner_id)
+
+            if xsocket in self.rsockets:
+                self.rsockets.remove(xsocket)
+            if xsocket in self.wsockets:
+                self.wsockets.remove(xsocket)
+
     def start(self):
         while True:
             rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 1000)
             self.read_handler(rsockets)
             self.write_handler(wsockets)
+            self.exception_handler(xsockets)
 
 
 if __name__ == '__main__':

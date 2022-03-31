@@ -98,7 +98,7 @@ class Client:
                 if wsocket is self.socket and len(self.output_buf) > 0:
                     size = wsocket.send(self.output_buf)
                     if size > 0:
-                        logger.debug("[CLIENT] send to mainserver {}".format(size))
+                        logger.debug("[CLIENT] send to server {}".format(size))
                         util.pop(self.output_buf, size)
 
                     if len(self.output_buf) == 0:
