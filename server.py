@@ -157,6 +157,7 @@ class Server:
                             if ec == 0 and msg.id in self.outter_conns:
                                 outter_conn = self.outter_conns[msg.id]
                                 util.push(outter_conn.output_buf, msg.data)
+
                                 if outter_conn.conn not in self.wsockets:
                                     self.wsockets.append(outter_conn.conn)
 
@@ -198,7 +199,11 @@ class Server:
                 inner_conn = self.inner_conns[inner_id]
                 try:
                     size = inner_conn.conn.send(inner_conn.input_buf)
+
+                    logger.debug("[SERVER] send to inner {}".format(size))
+
                     util.pop(inner_conn.input_buf, size)
+
                     if len(inner_conn.input_buf) == 0 and inner_conn.conn in self.wsockets:
                         self.wsockets.remove(inner_conn.conn)
 
@@ -210,7 +215,11 @@ class Server:
                 outter_conn = self.outter_conns[outter_id]
                 try:
                     size = outter_conn.conn.send(outter_conn.output_buf)
+
+                    logger.debug("[SERVER] send to outter {}".format(size))
+
                     util.pop(outter_conn.output_buf, size)
+
                     if len(outter_conn.output_buf) == 0 and outter_conn.conn in self.wsockets:
                         self.wsockets.remove(outter_conn.conn)
                 except:

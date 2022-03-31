@@ -51,28 +51,31 @@ class Client:
             # read
             for rsocket in rsockets:
                 if self.socket is rsocket:
-                    data = self.socket.recv(1024 * 1024)
+                    data = self.socket.recv(1024 * 128)
                     if len(data) == 0:
                         self.stop()
                         return
-
                     util.push(self.input_buf, data)
-                    msg, ec = util.pop_msg(self.input_buf)
-                    if ec == 0:
-                        logger.debug("[CLIENT] pop msg {}".format(msg.__dict__))
 
-                        if msg.type == MsgType.OPEN_CONN:
-                            rule_str = msg.data.decode(encoding="utf-8")
-                            rule = Rule()
-                            if rule.parse_string(rule_str) == 0:
-                                self.open_conn(msg.id, rule.from_addr, rule.from_port)
+                    while True:
+                        msg, ec = util.pop_msg(self.input_buf)
+                        if ec == 0:
+                            logger.debug("[CLIENT] pop msg type={} id={} len={}".format(msg.type, msg.id, len(msg.data)))
 
-                        elif msg.id in self.conns:
-                            connection = self.conns[msg.id]
-                            util.push(connection.input_buf, msg.data)
+                            if msg.type == MsgType.OPEN_CONN:
+                                rule_str = msg.data.decode(encoding="utf-8")
+                                rule = Rule()
+                                if rule.parse_string(rule_str) == 0:
+                                    self.open_conn(msg.id, rule.from_addr, rule.from_port)
 
-                            if connection.conn not in self.wsockets:
-                                self.wsockets.append(connection.conn)
+                            elif msg.id in self.conns:
+                                connection = self.conns[msg.id]
+                                util.push(connection.input_buf, msg.data)
+
+                                if connection.conn not in self.wsockets:
+                                    self.wsockets.append(connection.conn)
+                        else:
+                            break
 
                 elif rsocket in self.ids:
                     id = self.ids[rsocket]
