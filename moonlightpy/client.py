@@ -8,7 +8,7 @@ import util
 
 
 class Client:
-    def __init__(self, saddr: str, sport: int):
+    def __init__(self, saddr: str = "127.0.0.1", sport: int = 9001):
         self.saddr, self.sport = saddr, sport
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.socket.connect((self.saddr, self.sport))
@@ -152,6 +152,5 @@ class Client:
 
 
 if __name__ == '__main__':
-    #client = Client("139.224.117.52", 9001)
-    client = Client("127.0.0.1", 9001)
+    client = Client()
     client.start()
