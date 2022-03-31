@@ -51,7 +51,7 @@ class Client:
             # read
             for rsocket in rsockets:
                 if self.socket is rsocket:
-                    data = self.socket.recv(1024 * 10)
+                    data = self.socket.recv(1024 * 1024)
                     if len(data) == 0:
                         self.stop()
                         return
@@ -76,10 +76,8 @@ class Client:
 
                 elif rsocket in self.ids:
                     id = self.ids[rsocket]
-                    connection = self.conns[id]
-
                     try:
-                        data = rsocket.recv(1024 * 10)
+                        data = rsocket.recv(1024 * 128)
                         logger.debug("[CLIENT] recv {}".format(len(data)))
                         if len(data) == 0:
                             raise ValueError("close conn")
@@ -90,6 +88,10 @@ class Client:
                             self.wsockets.append(self.socket)
                     except:
                         self.close_conn(id)
+
+                else:
+                    if rsocket in self.rsockets:
+                        self.rsockets.remove(rsocket)
 
             # write
             for wsocket in wsockets:
@@ -102,7 +104,7 @@ class Client:
                     if len(self.output_buf) == 0:
                         self.wsockets.remove(self.socket)
 
-                elif wsocket is not self.socket and wsocket in self.ids:
+                elif wsocket in self.ids:
                     id = self.ids[wsocket]
                     connection = self.conns[id]
                     if len(connection.input_buf) > 0:

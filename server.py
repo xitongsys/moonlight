@@ -1,114 +1,216 @@
+import json
 from socket import *
 from select import *
-from typing import Tuple
-from msg import *
-from datetime import datetime
 import logger
 import util
-from com import Connection
+from com import Connection, Rule
+from msg import *
+import random
+
+
+class Config:
+    def __init__(self, config_file: str = None):
+        self.addr = "0.0.0.0"
+        self.port = 9001
+        self.max_num = 1024
+        self.rule_file = ''
+
+        if config_file:
+            with open(config_file) as fp:
+                cfg = json.load(fp)
+                self.addr = cfg['addr']
+                self.port = cfg['port']
+                self.max_num = cfg['max_num']
+                self.rule_file = cfg['rule_file']
 
 
 class Server:
-    def __init__(self, addr: str, port: int, max_num: int):
-        self.addr, self.port, self.max_num = addr, port, max_num
+    def __init__(self, config_file: str = None):
+        self.config = Config(config_file)
+        self.rules = {}
+
         self.socket = socket(family=AF_INET, type=SOCK_STREAM, proto=0)
-        self.socket.bind((self.addr, self.port))
+        self.socket.bind((self.config.addr, self.config.port))
         self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, True)
         self.socket.setblocking(False)
-        self.socket.listen(self.max_num)
+        self.socket.listen(self.config.max_num)
 
-        logger.info("server start listen {}:{} by max_num = {}".format(self.addr, self.port, self.max_num))
+        self.outter_sockets = set()
+
+        self.inner_conns = {}
+        self.inner_ids = {}
+
+        self.outter_conns = {}
+        self.outter_ids = {}
+
+        self.outter_id_to_inner_id = {}
 
         self.rsockets, self.wsockets, self.xsockets = [self.socket], [], []
 
-        self.input_buf = bytearray()
+        logger.info("laurel start {}".format(json.dumps(self.config.__dict__)))
 
-        self.ids = {}
-        self.conns = {}
+    def choose_inner_conn(self):
+        cs = list(self.inner_conns.keys())
+        return random.choice(cs)
 
-    def open_conn(self, conn: socket, addr: str):
-        id = "{}:{},{}:{}".format(self.addr,self.port, addr[0], addr[1])
+    def create_outter_socket(self, rule: Rule):
+        if rule not in self.rules:
+            try:
+                sk = socket(family=AF_INET, type=SOCK_STREAM, proto=0)
+                sk.bind((rule.to_addr, rule.to_port))
+                sk.setsockopt(SOL_SOCKET, SO_REUSEADDR, True)
+                sk.setblocking(False)
+                sk.listen(self.config.max_num)
+                self.outter_sockets.add(sk)
+                self.rsockets.append(sk)
+                logger.info("[SERVER] create rule {}".format(rule))
+            except:
+                logger.error("[SERVER] create rule failed {}".format(rule))
 
-        logger.info("[SERVER] open conn {}".format(id))
+    def open_inner_conn(self, inner_id: str, conn: socket):
+        if inner_id not in self.inner_conns:
+            self.inner_conns[inner_id] = Connection(inner_id, conn)
+            self.inner_ids[conn] = inner_id
+            conn.setblocking(False)
+            self.rsockets.append(conn)
+            self.wsockets.append(conn)
+            logger.info("[SERVER] open inner conn {}".format(inner_id))
 
-        connection = Connection(id, conn)
-        conn.setblocking(False)
-        self.conns[id] = connection
-        self.ids[conn] = id
-        self.rsockets.append(conn)
-        self.wsockets.append(conn)
-        util.push_msg(self.input_buf, MsgType.OPEN_CONN, id)
+    def close_inner_conn(self, inner_id: str):
+        if inner_id in self.inner_conns:
+            connection = self.inner_conns[inner_id]
+            for o_id, i_id in list(self.outter_id_to_inner_id.items()):
+                if i_id == inner_id:
+                    del self.outter_id_to_inner_id[o_id]
 
-    def close_conn(self, conn):
-        if conn in self.ids:
-            logger.info("[SERVER] close conn {}".format(conn))
+            del self.inner_conns[inner_id]
+            del self.inner_ids[connection.conn]
+            logger.info("[SERVER] close inner conn {}".format(inner_id))
 
-            id = self.ids[conn]
-            del self.conns[id]
-            del self.ids[conn]
+    def open_outter_conn(self, outter_id: str, conn: socket):
+        if outter_id not in self.outter_conns:
+            self.outter_conns[outter_id] = Connection(outter_id, conn)
+            self.outter_ids[conn] = outter_id
+            conn.setblocking(False)
+            self.rsockets.append(conn)
+            self.wsockets.append(conn)
+            inner_id = self.choose_inner_conn()
+            self.outter_id_to_inner_id[outter_id] = inner_id
+            logger.info("[SERVER] open outter conn {}".format(outter_id))
 
-        if conn in self.rsockets:
-            self.rsockets.remove(conn)
-        if conn in self.wsockets:
-            self.wsockets.remove(conn)
-        conn.close()
+    def close_outter_conn(self, outter_id: str):
+        if outter_id in self.outter_conns:
+            connection = self.outter_conns[outter_id]
+            if outter_id in self.outter_id_to_inner_id:
+                del self.outter_id_to_inner_id[outter_id]
 
-    def push_msg(self, msg: Msg) -> int:
-        if msg.id not in self.conns:
-            return -1
-        util.push(self.conns[msg.id].output_buf, msg.data)
-        return 0
+            del self.outter_conns[outter_id]
+            del self.outter_ids[connection.conn]
+            logger.info("[SERVER] close outter conn {}".format(outter_id))
 
-    def pop_msg(self) -> Tuple[Msg, int]:
-        return util.pop_msg(self.input_buf)
+    def load_rules(self, file: str):
+        with open(file, 'r') as fp:
+            for line in fp.readlines():
+                line = line.strip()
+                rule = Rule()
+                if rule.parse_string(line) == 0:
+                    self.create_outter_socket(rule)
 
-    def poll(self):
-        rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 0)
+    def read_handler(self, rsockets: list):
         for rsocket in rsockets:
             if rsocket is self.socket:
                 conn, addr = rsocket.accept()
-                self.open_conn(conn, addr)
+                inner_id = "{}:{}".format(addr[0], addr[1])
+                self.open_inner_conn(inner_id, conn)
 
-            else:
+            elif rsocket in self.outter_sockets:
+                conn, addr = rsocket.accept()
+                outter_id = "{}:{}".format(addr[0], addr[1])
+                self.open_outter_conn(outter_id, conn)
+
+            elif rsocket in self.inner_ids:
+                inner_id = self.inner_ids[rsocket]
+                inner_conn = self.inner_conns[inner_id]
+
                 try:
-                    data = rsocket.recv(1024 * 10)
-                    id = self.ids[rsocket]
-
-                    logger.debug("[SERVER] recv {} {}".format(id, data))
-
+                    data = rsocket.recv(1024 * 128)
                     if len(data) > 0:
-                        util.push_msg(self.input_buf, MsgType.DATA, id, data)
+                        util.push(inner_conn.output_buf, data)
+                        while True:
+                            msg, ec = util.pop_msg(inner_conn.output_buf)
+                            if ec != 0:
+                                break
+
+                            if ec == 0 and msg.id in self.outter_conns:
+                                outter_conn = self.outter_conns[msg.id]
+                                util.push(outter_conn.output_buf, msg.data)
+                                if outter_conn.conn not in self.wsockets:
+                                    self.wsockets.append(outter_conn.conn)
+
                     else:
-                        raise ValueError("close connection")
+                        raise ValueError("inner connection error")
 
                 except:
-                    self.close_conn(rsocket)
+                    self.close_inner_conn(inner_id)
 
+            elif rsocket in self.outter_ids:
+                outter_id = self.outter_ids[rsocket]
+                try:
+                    data = rsocket.recv(1024 * 128)
+                    if len(data) > 0:
+                        if outter_id not in self.outter_id_to_inner_id:
+                            raise ValueError("can't find inner id")
 
-        for wsocket in wsockets:
-            if wsocket not in self.ids:
-                continue
+                        inner_id = self.outter_id_to_inner_id[outter_id]
+                        inner_conn = self.inner_conns[inner_id]
+                        util.push_msg(inner_conn.input_buf, MsgType.DATA, outter_id, data)
 
-            id = self.ids[wsocket]
-            connection = self.conns[id]
-            if len(connection.output_buf) == 0:
-                continue
+                        if inner_conn.conn not in self.wsockets:
+                            self.wsockets.append(inner_conn.conn)
 
-            try:
-                size = wsocket.send(connection.output_buf)
+                    else:
+                        raise ValueError("outter connection error")
 
-                logger.debug("[SERVER] send size {}".format(size))
+                except:
+                    self.close_outter_conn(outter_id)
 
-                if size > 0:
-                    util.pop(connection.output_buf, size)
-            except:
-                self.close_conn(wsocket)
+            else:
+                if rsocket in self.rsockets:
+                    self.rsockets.remove(rsocket)
 
-        for xsocket in xsockets:
-            self.close_conn(xsocket)
+    def write_handler(self, wsockets: list):
+        for wsocket in self.wsockets:
+            if wsocket in self.inner_ids:
+                inner_id = self.inner_ids[wsocket]
+                inner_conn = self.inner_conns[inner_id]
+                try:
+                    size = inner_conn.conn.send(inner_conn.input_buf)
+                    util.pop(inner_conn.input_buf, size)
+                    if len(inner_conn.input_buf) == 0 and inner_conn.conn in self.wsockets:
+                        self.wsockets.remove(inner_conn.conn)
+
+                except:
+                    self.close_inner_conn(inner_id)
+
+            elif wsocket in self.outter_ids:
+                outter_id = self.outter_ids[wsocket]
+                outter_conn = self.outter_conns[outter_id]
+                try:
+                    size = outter_conn.conn.send(outter_conn.output_buf)
+                    util.pop(outter_conn.output_buf, size)
+                    if len(outter_conn.output_buf) == 0 and outter_conn.conn in self.wsockets:
+                        self.wsockets.remove(outter_conn.conn)
+                except:
+                    self.close_outter_conn(outter_id)
+
+    def start(self):
+        while True:
+            rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 1000)
+            self.read_handler(rsockets)
+            self.write_handler(wsockets)
 
 
 if __name__ == '__main__':
-    server = Server("0.0.0.0", 9001, 1024)
-    while True:
-        server.poll()
+    ms = Server('cfg.json')
+    ms.load_rules(ms.config.rule_file)
+    ms.start()
