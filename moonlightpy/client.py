@@ -4,7 +4,7 @@ from select import *
 from . import logger
 from .msg import *
 from .com import *
-import moonlightpy.util
+from . import util
 
 
 class Client:
