@@ -1,6 +1,5 @@
 import json
-from socket import *
-from select import *
+import socket, select
 import logger
 import util
 from com import Connection, Rule
@@ -29,9 +28,9 @@ class Server:
         self.config = Config(config_file)
         self.rules = {}
 
-        self.socket = socket(family=AF_INET, type=SOCK_STREAM, proto=0)
+        self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
         self.socket.bind((self.config.addr, self.config.port))
-        self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, True)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
         self.socket.setblocking(False)
         self.socket.listen(self.config.max_num)
 
@@ -56,9 +55,9 @@ class Server:
     def create_outter_socket(self, rule: Rule):
         if rule not in self.rules:
             try:
-                sk = socket(family=AF_INET, type=SOCK_STREAM, proto=0)
+                sk = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
                 sk.bind((rule.to_addr, rule.to_port))
-                sk.setsockopt(SOL_SOCKET, SO_REUSEADDR, True)
+                sk.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
                 sk.setblocking(False)
                 sk.listen(self.config.max_num)
                 self.outter_sockets[sk] = rule
@@ -164,6 +163,8 @@ class Server:
                     else:
                         raise ValueError("inner connection error")
 
+                except BlockingIOError:
+                    pass
                 except:
                     self.close_inner_conn(inner_id)
 
@@ -185,6 +186,8 @@ class Server:
                     else:
                         raise ValueError("outter connection error")
 
+                except BlockingIOError:
+                    pass
                 except:
                     self.close_outter_conn(outter_id)
 
@@ -207,6 +210,8 @@ class Server:
                     if len(inner_conn.input_buf) == 0 and inner_conn.conn in self.wsockets:
                         self.wsockets.remove(inner_conn.conn)
 
+                except BlockingIOError:
+                    pass
                 except:
                     self.close_inner_conn(inner_id)
 
@@ -222,10 +227,13 @@ class Server:
 
                     if len(outter_conn.output_buf) == 0 and outter_conn.conn in self.wsockets:
                         self.wsockets.remove(outter_conn.conn)
+
+                except BlockingIOError:
+                    pass
                 except:
                     self.close_outter_conn(outter_id)
 
-    def exception_handler(self, xsockets:list):
+    def exception_handler(self, xsockets: list):
         for xsocket in xsockets:
             if xsocket in self.outter_ids:
                 outter_id = self.outter_ids[xsocket]
@@ -241,7 +249,7 @@ class Server:
 
     def start(self):
         while True:
-            rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 1000)
+            rsockets, wsockets, xsockets = select.select(self.rsockets, self.wsockets, self.xsockets, 1000)
             self.read_handler(rsockets)
             self.write_handler(wsockets)
             self.exception_handler(xsockets)

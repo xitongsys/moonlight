@@ -81,14 +81,19 @@ class Client:
                     id = self.ids[rsocket]
                     try:
                         data = rsocket.recv(1024 * 128)
-                        logger.debug("[CLIENT] recv {}".format(len(data)))
-                        if len(data) == 0:
-                            raise ValueError("close conn")
+                        if len(data) > 0:
+                            logger.debug("[CLIENT] recv {}".format(len(data)))
 
-                        util.push_msg(self.output_buf, MsgType.DATA, id, data)
+                            util.push_msg(self.output_buf, MsgType.DATA, id, data)
 
-                        if self.socket not in self.wsockets:
-                            self.wsockets.append(self.socket)
+                            if self.socket not in self.wsockets:
+                                self.wsockets.append(self.socket)
+
+                        else:
+                            raise ValueError("conn error")
+
+                    except BlockingIOError:
+                        pass
                     except:
                         self.close_conn(id)
 
@@ -99,28 +104,43 @@ class Client:
             # write
             for wsocket in wsockets:
                 if wsocket is self.socket and len(self.output_buf) > 0:
-                    size = wsocket.send(self.output_buf)
-                    if size > 0:
-                        logger.debug("[CLIENT] send to server {}".format(size))
-                        util.pop(self.output_buf, size)
+                    try:
+                        size = wsocket.send(self.output_buf)
+                        if size > 0:
+                            logger.debug("[CLIENT] send to server {}".format(size))
+                            util.pop(self.output_buf, size)
 
-                    if len(self.output_buf) == 0:
-                        self.wsockets.remove(self.socket)
+                        if len(self.output_buf) == 0:
+                            self.wsockets.remove(self.socket)
+
+                    except BlockingIOError:
+                        pass
+
+                    except:
+                        self.stop()
 
                 elif wsocket in self.ids:
                     id = self.ids[wsocket]
                     connection = self.conns[id]
-                    if len(connection.input_buf) > 0:
-                        size = wsocket.send(connection.input_buf)
 
-                        logger.debug("[CLIENT] send {}".format(size))
+                    try:
+                        if len(connection.input_buf) > 0:
+                            size = wsocket.send(connection.input_buf)
 
-                        if size > 0:
-                            util.pop(connection.input_buf, size)
+                            logger.debug("[CLIENT] send {}".format(size))
 
-                    if len(connection.input_buf) == 0:
-                        self.wsockets.remove(wsocket)
+                            if size > 0:
+                                util.pop(connection.input_buf, size)
 
+                        if len(connection.input_buf) == 0:
+                            self.wsockets.remove(wsocket)
+
+                    except BlockingIOError:
+                        pass
+                    except:
+                        self.close_conn(id)
+
+            # exception
             for xsocket in xsockets:
                 if xsocket is self.socket:
                     self.stop()
