@@ -1,10 +1,9 @@
-from socket import *
-from select import *
+import socket, select
 
-from . import logger
-from .msg import *
-from .com import *
 from . import util
+from . import logger
+from .msg import Msg, MsgType
+from .com import Connection, Rule
 
 
 class Client:
@@ -12,7 +11,7 @@ class Client:
 
     def __init__(self, saddr: str = "127.0.0.1", sport: int = 9001):
         self.saddr, self.sport = saddr, sport
-        self.socket = socket(AF_INET, SOCK_STREAM)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.saddr, self.sport))
         self.socket.setblocking(False)
         self.rsockets, self.wsockets, self.xsockets = [self.socket], [self.socket], []
@@ -26,7 +25,7 @@ class Client:
     def open_conn(self, id: str, addr: str, port: int):
         logger.info("[CLIENT] open conn {}".format(id))
 
-        conn = socket(AF_INET, SOCK_STREAM)
+        conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         conn.connect((addr, port))
         conn.setblocking(False)
         self.rsockets.append(conn)
@@ -48,7 +47,7 @@ class Client:
 
     def start(self):
         while True:
-            rsockets, wsockets, xsockets = select(self.rsockets, self.wsockets, self.xsockets, 1000)
+            rsockets, wsockets, xsockets = select.select(self.rsockets, self.wsockets, self.xsockets, 1000)
 
             # read
             for rsocket in rsockets:
@@ -62,7 +61,8 @@ class Client:
                     while True:
                         msg, ec = util.pop_msg(self.input_buf)
                         if ec == 0:
-                            logger.debug("[CLIENT] pop msg type={} id={} len={}".format(msg.type, msg.id, len(msg.data)))
+                            logger.debug(
+                                "[CLIENT] pop msg type={} id={} len={}".format(msg.type, msg.id, len(msg.data)))
 
                             if msg.type == MsgType.OPEN_CONN:
                                 rule_str = msg.data.decode(encoding="utf-8")

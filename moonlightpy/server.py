@@ -1,10 +1,9 @@
-import json
+import json, random
 import socket, select
 from . import logger
 from . import util
 from .com import Connection, Rule
-from .msg import *
-import random
+from .msg import Msg, MsgType
 
 
 class Config:
@@ -54,6 +53,8 @@ class Server:
 
     def choose_inner_conn(self):
         cs = list(self.inner_conns.keys())
+        if len(cs) == 0:
+            return None
         return random.choice(cs)
 
     def create_outter_socket(self, rule: Rule):
@@ -92,12 +93,16 @@ class Server:
 
     def open_outter_conn(self, outter_id: str, conn: socket):
         if outter_id not in self.outter_conns:
+            inner_id = self.choose_inner_conn()
+            if inner_id is None:
+                logger.error("[SERVER] no client for outter conn {}".format(outter_id))
+                return
+
             self.outter_conns[outter_id] = Connection(outter_id, conn)
             self.outter_ids[conn] = outter_id
             conn.setblocking(False)
             self.rsockets.append(conn)
             self.wsockets.append(conn)
-            inner_id = self.choose_inner_conn()
             self.outter_id_to_inner_id[outter_id] = inner_id
             logger.info("[SERVER] open outter conn {}".format(outter_id))
 
@@ -133,13 +138,14 @@ class Server:
                 outter_id = "{},{},{},{}".format(rule.from_addr, rule.from_port, addr[0], addr[1])
                 self.open_outter_conn(outter_id, conn)
 
-                inner_id = self.outter_id_to_inner_id[outter_id]
-                inner_conn = self.inner_conns[inner_id]
-                msg = Msg(MsgType.OPEN_CONN, outter_id, )
-                util.push_msg(inner_conn.input_buf, MsgType.OPEN_CONN, outter_id, bytes(rule.__str__(), "utf-8"))
+                if outter_id in self.outter_id_to_inner_id:
+                    inner_id = self.outter_id_to_inner_id[outter_id]
+                    inner_conn = self.inner_conns[inner_id]
+                    msg = Msg(MsgType.OPEN_CONN, outter_id, )
+                    util.push_msg(inner_conn.input_buf, MsgType.OPEN_CONN, outter_id, bytes(rule.__str__(), "utf-8"))
 
-                if inner_conn.conn not in self.wsockets:
-                    self.wsockets.append(inner_conn.conn)
+                    if inner_conn.conn not in self.wsockets:
+                        self.wsockets.append(inner_conn.conn)
 
             elif rsocket in self.inner_ids:
                 inner_id = self.inner_ids[rsocket]

@@ -1,5 +1,7 @@
-from .coding import Coding, EC
 from typing import Tuple
+
+from .coding import Coding, EC
+
 
 class MsgType:
     OPEN_CONN = 1

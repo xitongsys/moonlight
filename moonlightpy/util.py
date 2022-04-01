@@ -1,9 +1,10 @@
 from typing import Tuple
-from .msg import *
-from socket import socket
+import socket
+
+from .msg import Msg
 
 
-def socket2key(s: socket) -> str:
+def socket2key(s: socket.socket) -> str:
     return str(s)
 
 
