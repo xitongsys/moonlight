@@ -8,6 +8,8 @@ from . import util
 
 
 class Client:
+    BUF_SIZE = 1024 * 256
+
     def __init__(self, saddr: str = "127.0.0.1", sport: int = 9001):
         self.saddr, self.sport = saddr, sport
         self.socket = socket(AF_INET, SOCK_STREAM)
@@ -22,7 +24,7 @@ class Client:
         self.ids = {}
 
     def open_conn(self, id: str, addr: str, port: int):
-        logger.info("[CLIENT] open conn id={}, {}:{}".format(id, addr, port))
+        logger.info("[CLIENT] open conn {}".format(id))
 
         conn = socket(AF_INET, SOCK_STREAM)
         conn.connect((addr, port))
@@ -51,7 +53,7 @@ class Client:
             # read
             for rsocket in rsockets:
                 if self.socket is rsocket:
-                    data = self.socket.recv(1024 * 128)
+                    data = self.socket.recv(Client.BUF_SIZE)
                     if len(data) == 0:
                         self.stop()
                         return
@@ -80,7 +82,7 @@ class Client:
                 elif rsocket in self.ids:
                     id = self.ids[rsocket]
                     try:
-                        data = rsocket.recv(1024 * 128)
+                        data = rsocket.recv(Client.BUF_SIZE)
                         if len(data) > 0:
                             logger.debug("[CLIENT] recv {}".format(len(data)))
 

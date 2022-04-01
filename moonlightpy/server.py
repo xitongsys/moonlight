@@ -24,6 +24,8 @@ class Config:
 
 
 class Server:
+    BUF_SIZE = 1024 * 256
+
     def __init__(self, config_file: str = None):
         self.config = Config(config_file)
         self.rules = {}
@@ -121,15 +123,15 @@ class Server:
         for rsocket in rsockets:
             if rsocket is self.socket:
                 conn, addr = rsocket.accept()
-                inner_id = "{}:{}".format(addr[0], addr[1])
+                inner_id = "{},{}".format(addr[0], addr[1])
                 self.open_inner_conn(inner_id, conn)
 
             elif rsocket in self.outter_sockets:
-                conn, addr = rsocket.accept()
-                outter_id = "{}:{}".format(addr[0], addr[1])
-                self.open_outter_conn(outter_id, conn)
-
                 rule = self.outter_sockets[rsocket]
+
+                conn, addr = rsocket.accept()
+                outter_id = "{},{},{},{}".format(rule.from_addr, rule.from_port, addr[0], addr[1])
+                self.open_outter_conn(outter_id, conn)
 
                 inner_id = self.outter_id_to_inner_id[outter_id]
                 inner_conn = self.inner_conns[inner_id]
@@ -144,7 +146,7 @@ class Server:
                 inner_conn = self.inner_conns[inner_id]
 
                 try:
-                    data = rsocket.recv(1024 * 128)
+                    data = rsocket.recv(Server.BUF_SIZE)
 
                     logger.debug("[SERVER] recv from inner {}".format(len(data)))
 
@@ -173,7 +175,7 @@ class Server:
             elif rsocket in self.outter_ids:
                 outter_id = self.outter_ids[rsocket]
                 try:
-                    data = rsocket.recv(1024 * 128)
+                    data = rsocket.recv(Server.BUF_SIZE)
                     if len(data) > 0:
                         if outter_id not in self.outter_id_to_inner_id:
                             raise ValueError("can't find inner id")

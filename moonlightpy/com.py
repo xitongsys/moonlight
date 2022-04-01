@@ -1,7 +1,6 @@
 from datetime import datetime
 from socket import socket
 
-
 class Connection:
     def __init__(self, id: str, conn: socket):
         self.id = id
