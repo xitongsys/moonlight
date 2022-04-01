@@ -1,5 +1,6 @@
 import json, random
 import socket, select
+
 from . import logger
 from . import util
 from .com import Connection, Rule
@@ -11,7 +12,7 @@ class Config:
         self.addr = "0.0.0.0"
         self.port = 9001
         self.max_num = 1024
-        self.rule_file = ''
+        self.rules = []
 
         if config_file:
             with open(config_file) as fp:
@@ -19,7 +20,7 @@ class Config:
                 self.addr = cfg['addr']
                 self.port = cfg['port']
                 self.max_num = cfg['max_num']
-                self.rule_file = cfg['rule_file']
+                self.rules = cfg['rules']
 
 
 class Server:
@@ -47,7 +48,8 @@ class Server:
 
         self.rsockets, self.wsockets, self.xsockets = [self.socket], [], []
 
-        self.load_rules(self.config.rule_file)
+        for line in self.config.rules:
+            self.add_rule(line)
 
         logger.info("laurel start {}".format(json.dumps(self.config.__dict__)))
 
@@ -116,13 +118,11 @@ class Server:
             del self.outter_ids[connection.conn]
             logger.info("[SERVER] close outter conn {}".format(outter_id))
 
-    def load_rules(self, file: str):
-        with open(file, 'r') as fp:
-            for line in fp.readlines():
-                line = line.strip()
-                rule = Rule()
-                if rule.parse_string(line) == 0:
-                    self.create_outter_socket(rule)
+    def add_rule(self, line: str):
+        line = line.strip()
+        rule = Rule()
+        if rule.parse_string(line) == 0:
+            self.create_outter_socket(rule)
 
     def read_handler(self, rsockets: list):
         for rsocket in rsockets:

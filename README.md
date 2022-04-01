@@ -17,24 +17,20 @@ python -m pip install moonlightpy
   "addr": "0.0.0.0",
   "port": 9001,
   "max_num": 1024,
-  "rule_file": "rules.csv"
+  "rules": [
+    "192.168.0.134,22,0.0.0.0,13422",
+    "192.168.0.132,22,0.0.0.0,13222"
+  ]
 }
 ```
 
-### rule.csv
-
-```csv
-192.168.0.134,22,0.0.0.0,13422
-192.168.0.132,22,0.0.0.0,13222
-```
-
-### run
+### run server & clients
 
 ```bash
-# run server on some public network host (e.g. 1.1.1.1)
+# run server on one public network host (e.g. 1.1.1.1)
  python -m moonlightpy server .\config.json
  
- # run clients on some intranet host 
+ # run clients on some intranet hosts 
  python -m moonlightpy client 1.1.1.1 9001
 ```
 
