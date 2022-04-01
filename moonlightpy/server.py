@@ -206,7 +206,7 @@ class Server:
                     self.rsockets.remove(rsocket)
 
     def write_handler(self, wsockets: list):
-        for wsocket in self.wsockets:
+        for wsocket in wsockets:
             if wsocket in self.inner_ids:
                 inner_id = self.inner_ids[wsocket]
                 inner_conn = self.inner_conns[inner_id]
