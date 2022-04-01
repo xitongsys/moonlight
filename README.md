@@ -1,6 +1,15 @@
 # moonlight
 
-moonlight is a reverse port forwarding tool written by python
+moonlight is a reverse port forwarding tool written by python. You can run several clients connected to same server in the intranet network and the server can balance requests between these clients.
+```
+intranet network              public network host
+                               ----------------
+    client1  <-------------->  | server       |
+    client2  <-------------->  | 1.1.1.1:9001 |
+    client3  <-------------->  |              |
+                               ----------------
+```
+
 
 ## install
 
@@ -24,11 +33,11 @@ python -m pip install moonlightpy
 }
 ```
 
-### run server & clients
+### server & clients
 
 ```bash
 # run server on one public network host (e.g. 1.1.1.1)
- python -m moonlightpy server .\config.json
+ python -m moonlightpy server ./config.json
  
  # run clients on some intranet hosts 
  python -m moonlightpy client 1.1.1.1 9001
