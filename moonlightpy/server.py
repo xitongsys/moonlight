@@ -1,4 +1,4 @@
-import json, random
+import yaml, json, random
 import socket, select
 
 from . import logger
@@ -11,20 +11,19 @@ class Config:
     def __init__(self, config_file: str = None):
         self.addr = "0.0.0.0"
         self.port = 9001
-        self.max_num = 1024
         self.rules = []
 
         if config_file:
             with open(config_file) as fp:
-                cfg = json.load(fp)
+                cfg = yaml.safe_load(fp)
                 self.addr = cfg['addr']
                 self.port = cfg['port']
-                self.max_num = cfg['max_num']
                 self.rules = cfg['rules']
 
 
 class Server:
     BUF_SIZE = 1024 * 256
+    MAX_NUM = 1024 * 4
 
     def __init__(self, config_file: str = None):
         self.config = Config(config_file)
@@ -34,7 +33,7 @@ class Server:
         self.socket.bind((self.config.addr, self.config.port))
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
         self.socket.setblocking(False)
-        self.socket.listen(self.config.max_num)
+        self.socket.listen(Server.MAX_NUM)
 
         self.outter_sockets = {}
 
@@ -66,7 +65,7 @@ class Server:
                 sk.bind((rule.to_addr, rule.to_port))
                 sk.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
                 sk.setblocking(False)
-                sk.listen(self.config.max_num)
+                sk.listen(Server.MAX_NUM)
                 self.outter_sockets[sk] = rule
                 self.rsockets.append(sk)
                 logger.info("[SERVER] create rule {}".format(rule))
@@ -259,12 +258,12 @@ class Server:
 
     def start(self):
         while True:
-            rsockets, wsockets, xsockets = select.select(self.rsockets, self.wsockets, self.xsockets, 1000)
+            rsockets, wsockets, xsockets = select.select(self.rsockets, self.wsockets, self.xsockets, 1)
             self.read_handler(rsockets)
             self.write_handler(wsockets)
             self.exception_handler(xsockets)
 
 
 if __name__ == '__main__':
-    ms = Server('cfg.json')
+    ms = Server('config.json')
     ms.start()

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='moonlightpy',
-    version='0.0.7',
+    version='0.0.8',
     author='xitongsys',
     author_email='xitongsys@gmail.com',
     url='https://github.com/xitongsys/moonlight',

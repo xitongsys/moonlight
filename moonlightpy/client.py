@@ -47,7 +47,7 @@ class Client:
 
     def start(self):
         while True:
-            rsockets, wsockets, xsockets = select.select(self.rsockets, self.wsockets, self.xsockets, 1000)
+            rsockets, wsockets, xsockets = select.select(self.rsockets, self.wsockets, self.xsockets, 1)
 
             # read
             for rsocket in rsockets:
