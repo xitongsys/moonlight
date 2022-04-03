@@ -6,8 +6,11 @@ the intranet network and the server can balance requests between these clients.
 ```
 intranet network              public network host
                                ----------------
-    client1  <-------------->  | server       |
-    client2  <-------------->  | 1.1.1.1:9001 |
+intranet01                     |              |
+    client1  <-------------->  |              |
+    client2  <-------------->  |    server    |
+                               | 1.1.1.1:9001 |    
+intranet02                     |              |
     client3  <-------------->  |              |
                                ----------------
 ```
