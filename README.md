@@ -26,8 +26,8 @@ python -m pip install moonlightpy
 "addr": "0.0.0.0"
 "port": 9001
 "rules": [
-  "192.168.0.134,22,0.0.0.0,13422",
-  "192.168.0.132,22,0.0.0.0,13222"
+  "intranet01,192.168.0.134,22,0.0.0.0,13422",
+  "intranet02,192.168.0.132,22,0.0.0.0,13222"
 ]
 
 ```
@@ -39,7 +39,7 @@ python -m pip install moonlightpy
  python -m moonlightpy server ./config.yaml
  
  # run clients on some intranet hosts 
- python -m moonlightpy client 1.1.1.1 9001
+ python -m moonlightpy client intranet01 1.1.1.1 9001
 ```
 
 Now you can access the `192.168.0.134:22` from `1.1.1.1:13422` and `192.168.0.132:22` from `1.1.1.1:13222`
