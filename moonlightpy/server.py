@@ -30,9 +30,15 @@ class Server:
         self.rules = {}
 
         self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
-        self.socket.bind((self.config.addr, self.config.port))
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
         self.socket.setblocking(False)
+
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 3)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
+
+        self.socket.bind((self.config.addr, self.config.port))
         self.socket.listen(Server.MAX_NUM)
 
         self.outter_sockets = {}
@@ -68,9 +74,9 @@ class Server:
         if rule not in self.rules:
             try:
                 sk = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
-                sk.bind((rule.to_addr, rule.to_port))
                 sk.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
                 sk.setblocking(False)
+                sk.bind((rule.to_addr, rule.to_port))
                 sk.listen(Server.MAX_NUM)
                 self.outter_sockets[sk] = rule
                 self.rsockets.append(sk)
