@@ -7,6 +7,7 @@ class MsgType:
     OPEN_CONN = 1
     CLOSE_CONN = 2
     DATA = 3
+    REG = 4
 
 
 class Msg:

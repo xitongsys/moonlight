@@ -11,8 +11,8 @@ if __name__ == '__main__':
         s.start()
 
     elif role == 'client':
-        addr, port = sys.argv[2], int(sys.argv[3])
-        c = client.Client(addr, port)
+        network_name, addr, port = sys.argv[2], sys.argv[3], int(sys.argv[4])
+        c = client.Client(network_name, addr, port)
         c.start()
 
     else:

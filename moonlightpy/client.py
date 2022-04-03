@@ -9,7 +9,8 @@ from .com import Connection, Rule
 class Client:
     BUF_SIZE = 1024 * 256
 
-    def __init__(self, saddr: str = "127.0.0.1", sport: int = 9001):
+    def __init__(self, network_name: str = "", saddr: str = "127.0.0.1", sport: int = 9001):
+        self.network_name = network_name
         self.saddr, self.sport = saddr, sport
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.saddr, self.sport))
@@ -21,6 +22,9 @@ class Client:
 
         self.conns = {}
         self.ids = {}
+
+        # send register msg
+        util.push_msg(self.output_buf, MsgType.REG, network_name)
 
     def open_conn(self, id: str, addr: str, port: int):
         logger.info("[CLIENT] open conn {}".format(id))

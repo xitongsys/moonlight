@@ -37,6 +37,8 @@ class Server:
 
         self.outter_sockets = {}
 
+        self.network_name_to_inner_id = {}
+
         self.inner_conns = {}
         self.inner_ids = {}
 
@@ -50,10 +52,14 @@ class Server:
         for line in self.config.rules:
             self.add_rule(line)
 
-        logger.info("laurel start {}".format(json.dumps(self.config.__dict__)))
+        logger.info("[SERVER] start {}".format(json.dumps(self.config.__dict__)))
 
-    def choose_inner_conn(self):
-        cs = list(self.inner_conns.keys())
+    def choose_inner_conn(self, network_name: str = ''):
+        if network_name == '' or network_name not in self.network_name_to_inner_id:
+            cs = list(self.inner_conns.keys())
+        else:
+            cs = self.network_name_to_inner_id[network_name]
+
         if len(cs) == 0:
             return None
         return random.choice(cs)
@@ -92,9 +98,9 @@ class Server:
             del self.inner_ids[connection.conn]
             logger.info("[SERVER] close inner conn {}".format(inner_id))
 
-    def open_outter_conn(self, outter_id: str, conn: socket):
+    def open_outter_conn(self, network_name: str, outter_id: str, conn: socket):
         if outter_id not in self.outter_conns:
-            inner_id = self.choose_inner_conn()
+            inner_id = self.choose_inner_conn(network_name)
             if inner_id is None:
                 logger.error("[SERVER] no client for outter conn {}".format(outter_id))
                 return
@@ -134,8 +140,8 @@ class Server:
                 rule = self.outter_sockets[rsocket]
 
                 conn, addr = rsocket.accept()
-                outter_id = "{},{},{},{}".format(rule.from_addr, rule.from_port, addr[0], addr[1])
-                self.open_outter_conn(outter_id, conn)
+                outter_id = "{},{},{},{},{}".format(rule.network_name, rule.from_addr, rule.from_port, addr[0], addr[1])
+                self.open_outter_conn(rule.network_name, outter_id, conn)
 
                 if outter_id in self.outter_id_to_inner_id:
                     inner_id = self.outter_id_to_inner_id[outter_id]
@@ -161,6 +167,16 @@ class Server:
                             msg, ec = util.pop_msg(inner_conn.output_buf)
                             if ec != 0:
                                 break
+
+                            # register msg
+                            if msg.type == MsgType.REG:
+                                network_name = msg.id
+                                if network_name not in self.network_name_to_inner_id:
+                                    self.network_name_to_inner_id[network_name] = []
+                                self.network_name_to_inner_id[network_name].append(inner_id)
+
+                                logger.info("[SERVER] inner REG msg: network_name={}, inner_id={}".format(network_name, inner_id))
+                                continue
 
                             if ec == 0 and msg.id in self.outter_conns:
                                 outter_conn = self.outter_conns[msg.id]
