@@ -151,12 +151,15 @@ class Server:
 
                 if outter_id in self.outter_id_to_inner_id:
                     inner_id = self.outter_id_to_inner_id[outter_id]
-                    inner_conn = self.inner_conns[inner_id]
-                    msg = Msg(MsgType.OPEN_CONN, outter_id, )
-                    util.push_msg(inner_conn.input_buf, MsgType.OPEN_CONN, outter_id, bytes(rule.__str__(), "utf-8"))
+                    if inner_id in self.inner_conns:
+                        inner_conn = self.inner_conns[inner_id]
+                        msg = Msg(MsgType.OPEN_CONN, outter_id, )
+                        util.push_msg(inner_conn.input_buf, MsgType.OPEN_CONN, outter_id, bytes(rule.__str__(), "utf-8"))
 
-                    if inner_conn.conn not in self.wsockets:
-                        self.wsockets.append(inner_conn.conn)
+                        if inner_conn.conn not in self.wsockets:
+                            self.wsockets.append(inner_conn.conn)
+                    else:
+                        del self.outter_id_to_inner_id[outter_id]
 
             elif rsocket in self.inner_ids:
                 inner_id = self.inner_ids[rsocket]
