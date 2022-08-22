@@ -41,6 +41,10 @@ class Client:
         logger.debug("[CLIENT] close conn {}".format(id))
 
         if id in self.conns:
+            util.push_msg(self.output_buf, MsgType.CLOSE_CONN, id)
+            if self.socket not in self.wsockets:
+                self.wsockets.append(self.socket)
+                
             conn = self.conns[id].conn
             del self.ids[conn]
             del self.conns[id]
@@ -65,8 +69,7 @@ class Client:
                     while True:
                         msg, ec = util.pop_msg(self.input_buf)
                         if ec == 0:
-                            logger.debug(
-                                "[CLIENT] pop msg type={} id={} len={}".format(msg.type, msg.id, len(msg.data)))
+                            logger.debug("[CLIENT] pop msg type={} id={} len={}".format(msg.type, msg.id, len(msg.data)))
 
                             if msg.type == MsgType.OPEN_CONN:
                                 rule_str = msg.data.decode(encoding="utf-8")

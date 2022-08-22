@@ -187,6 +187,9 @@ class Server:
                                 logger.info("[SERVER] inner REG msg: network_name={}, inner_id={}".format(network_name, inner_id))
                                 continue
 
+                            if msg.type == MsgType.CLOSE_CONN:
+                                self.close_outter_conn(msg.id)
+
                             if ec == 0 and msg.id in self.outter_conns:
                                 outter_conn = self.outter_conns[msg.id]
                                 util.push(outter_conn.output_buf, msg.data)
