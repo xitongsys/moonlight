@@ -189,6 +189,7 @@ class Server:
 
                             if msg.type == MsgType.CLOSE_CONN:
                                 self.close_outter_conn(msg.id)
+                                continue
 
                             if ec == 0 and msg.id in self.outter_conns:
                                 outter_conn = self.outter_conns[msg.id]
