@@ -104,6 +104,10 @@ class Server:
             del self.inner_ids[connection.conn]
             logger.debug("[SERVER] close inner conn {}".format(inner_id))
 
+        for network_name, ids in self.network_name_to_inner_id.items():
+            if inner_id in ids:
+                ids.remove(inner_id)
+
     def open_outter_conn(self, network_name: str, outter_id: str, conn: socket):
         if outter_id not in self.outter_conns:
             inner_id = self.choose_inner_conn(network_name)
@@ -117,7 +121,7 @@ class Server:
             self.rsockets.append(conn)
             self.wsockets.append(conn)
             self.outter_id_to_inner_id[outter_id] = inner_id
-            logger.debug("[SERVER] open outter conn {}".format(outter_id))
+            logger.debug("[SERVER] open outter conn {}, inner_id={}".format(outter_id, inner_id))
 
     def close_outter_conn(self, outter_id: str):
         if outter_id in self.outter_conns:
@@ -133,6 +137,14 @@ class Server:
                         self.wsockets.append(inner_conn.conn)
 
                 del self.outter_id_to_inner_id[outter_id]
+
+            if connection.conn in self.wsockets:
+                self.wsockets.remove(connection.conn)
+            if connection.conn in self.rsockets:
+                self.rsockets.remove(connection.conn)
+            if connection.conn in self.xsockets:
+                self.xsockets.remove(connection.conn)
+            connection.conn.close()
 
             del self.outter_conns[outter_id]
             del self.outter_ids[connection.conn]
@@ -164,7 +176,6 @@ class Server:
                         inner_conn = self.inner_conns[inner_id]
                         msg = Msg(MsgType.OPEN_CONN, outter_id, )
                         util.push_msg(inner_conn.input_buf, MsgType.OPEN_CONN, outter_id, bytes(rule.__str__(), "utf-8"))
-
                         if inner_conn.conn not in self.wsockets:
                             self.wsockets.append(inner_conn.conn)
                     else:
@@ -218,11 +229,11 @@ class Server:
             elif rsocket in self.outter_ids:
                 outter_id = self.outter_ids[rsocket]
                 try:
+                    if outter_id not in self.outter_id_to_inner_id:
+                        raise ValueError("can't find inner id")
+
                     data = rsocket.recv(Server.BUF_SIZE)
                     if len(data) > 0:
-                        if outter_id not in self.outter_id_to_inner_id:
-                            raise ValueError("can't find inner id")
-
                         inner_id = self.outter_id_to_inner_id[outter_id]
                         inner_conn = self.inner_conns[inner_id]
                         util.push_msg(inner_conn.input_buf, MsgType.DATA, outter_id, data)
@@ -235,7 +246,7 @@ class Server:
 
                 except BlockingIOError:
                     pass
-                except:
+                except Exception as e:
                     self.close_outter_conn(outter_id)
 
             else:

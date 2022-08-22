@@ -46,6 +46,14 @@ class Client:
                 self.wsockets.append(self.socket)
 
             conn = self.conns[id].conn
+            if conn in self.rsockets:
+                self.rsockets.remove(conn)
+            if conn in self.wsockets:
+                self.wsockets.remove(conn)
+            if conn in self.xsockets:
+                self.xsockets.remove(conn)
+
+            conn.close()
             del self.ids[conn]
             del self.conns[id]
 
