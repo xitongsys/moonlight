@@ -123,6 +123,15 @@ class Server:
         if outter_id in self.outter_conns:
             connection = self.outter_conns[outter_id]
             if outter_id in self.outter_id_to_inner_id:
+                # close msg from server to inner client
+                inner_id = self.outter_id_to_inner_id[outter_id]
+                if inner_id in self.inner_conns:
+                    inner_conn = self.inner_conns[inner_id]
+                    msg = Msg(MsgType.CLOSE_CONN, outter_id, )
+                    util.push_msg(inner_conn.input_buf, MsgType.CLOSE_CONN, outter_id)
+                    if inner_conn.conn not in self.wsockets:
+                        self.wsockets.append(inner_conn.conn)
+
                 del self.outter_id_to_inner_id[outter_id]
 
             del self.outter_conns[outter_id]

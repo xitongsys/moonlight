@@ -44,7 +44,7 @@ class Client:
             util.push_msg(self.output_buf, MsgType.CLOSE_CONN, id)
             if self.socket not in self.wsockets:
                 self.wsockets.append(self.socket)
-                
+
             conn = self.conns[id].conn
             del self.ids[conn]
             del self.conns[id]
@@ -76,6 +76,9 @@ class Client:
                                 rule = Rule()
                                 if rule.parse_string(rule_str) == 0:
                                     self.open_conn(msg.id, rule.from_addr, rule.from_port)
+
+                            elif msg.type == MsgType.CLOSE_CONN:
+                                self.close_conn(msg.id)
 
                             elif msg.id in self.conns:
                                 connection = self.conns[msg.id]
