@@ -91,7 +91,7 @@ class Server:
             conn.setblocking(False)
             self.rsockets.append(conn)
             self.wsockets.append(conn)
-            logger.info("[SERVER] open inner conn {}".format(inner_id))
+            logger.debug("[SERVER] open inner conn {}".format(inner_id))
 
     def close_inner_conn(self, inner_id: str):
         if inner_id in self.inner_conns:
@@ -102,7 +102,7 @@ class Server:
 
             del self.inner_conns[inner_id]
             del self.inner_ids[connection.conn]
-            logger.info("[SERVER] close inner conn {}".format(inner_id))
+            logger.debug("[SERVER] close inner conn {}".format(inner_id))
 
     def open_outter_conn(self, network_name: str, outter_id: str, conn: socket):
         if outter_id not in self.outter_conns:
@@ -117,7 +117,7 @@ class Server:
             self.rsockets.append(conn)
             self.wsockets.append(conn)
             self.outter_id_to_inner_id[outter_id] = inner_id
-            logger.info("[SERVER] open outter conn {}".format(outter_id))
+            logger.debug("[SERVER] open outter conn {}".format(outter_id))
 
     def close_outter_conn(self, outter_id: str):
         if outter_id in self.outter_conns:
@@ -127,7 +127,7 @@ class Server:
 
             del self.outter_conns[outter_id]
             del self.outter_ids[connection.conn]
-            logger.info("[SERVER] close outter conn {}".format(outter_id))
+            logger.debug("[SERVER] close outter conn {}".format(outter_id))
 
     def add_rule(self, line: str):
         line = line.strip()

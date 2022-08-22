@@ -27,7 +27,7 @@ class Client:
         util.push_msg(self.output_buf, MsgType.REG, network_name)
 
     def open_conn(self, id: str, addr: str, port: int):
-        logger.info("[CLIENT] open conn {}".format(id))
+        logger.debug("[CLIENT] open conn {}".format(id))
 
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         conn.connect((addr, port))
@@ -38,7 +38,7 @@ class Client:
         self.ids[conn] = id
 
     def close_conn(self, id: str):
-        logger.info("[CLIENT] close conn {}".format(id))
+        logger.debug("[CLIENT] close conn {}".format(id))
 
         if id in self.conns:
             conn = self.conns[id].conn
